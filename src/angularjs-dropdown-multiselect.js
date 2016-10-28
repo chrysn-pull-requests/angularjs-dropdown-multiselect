@@ -92,16 +92,6 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 				$event.stopImmediatePropagation();
 			};
 
-			$scope.externalEvents = {
-				onItemSelect: angular.noop,
-				onItemDeselect: angular.noop,
-				onSelectAll: angular.noop,
-				onDeselectAll: angular.noop,
-				onInitDone: angular.noop,
-				onMaxSelectionReached: angular.noop,
-				onSelectionChanged: angular.noop
-			};
-
 			$scope.settings = {
 				dynamicTitle: true,
 				scrollable: false,
@@ -172,11 +162,11 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 						}
 					});
 				}
-				$scope.externalEvents.onSelectionChanged();
+				$scope._event('onSelectionChanged')();
 			};
 
 			angular.extend($scope.settings, $scope.extraSettings || []);
-			angular.extend($scope.externalEvents, $scope.events || []);
+			$scope._event = function(evname) { return (this.events !== undefined && this.events[evname]) || angular.noop; };
 			angular.extend($scope.texts, $scope.translationTexts);
 
 			$scope.singleSelection = $scope.settings.selectionLimit === 1;
@@ -288,13 +278,13 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 			$scope.selectAll = function() {
 				var searchResult;
 				$scope.deselectAll(true);
-				$scope.externalEvents.onSelectAll();
+				$scope._event('onSelectAll')();
 
 				searchResult = $filter('filter')($scope.options, $scope.getFilter($scope.input.searchFilter));
 				angular.forEach(searchResult, function(value) {
 					$scope.setSelectedItem(value[$scope.settings.idProp], true, false);
 				});
-				$scope.externalEvents.onSelectionChanged();
+				$scope._event('onSelectionChanged')();
 				$scope.selectedGroup = null;
 			};
 
@@ -302,7 +292,7 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 				dontSendEvent = dontSendEvent || false;
 
 				if (!dontSendEvent) {
-					$scope.externalEvents.onDeselectAll();
+					$scope._event('onDeselectAll')();
 				}
 
 				if ($scope.singleSelection) {
@@ -311,7 +301,7 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 					$scope.selectedModel.splice(0, $scope.selectedModel.length);
 				}
 				if (!dontSendEvent) {
-					$scope.externalEvents.onSelectionChanged();
+					$scope._event('onSelectionChanged')();
 				}
 				$scope.selectedGroup = null;
 			};
@@ -329,7 +319,7 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 				if ($scope.singleSelection) {
 					clearObject($scope.selectedModel);
 					angular.extend($scope.selectedModel, finalObj);
-					$scope.externalEvents.onItemSelect(finalObj);
+					$scope._event('onItemSelect')(finalObj);
 					if ($scope.settings.closeOnSelect || $scope.settings.closeOnDeselect) $scope.open = false;
 				} else {
 					dontRemove = dontRemove || false;
@@ -338,26 +328,26 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 
 					if (!dontRemove && exists) {
 						$scope.selectedModel.splice(findIndex($scope.selectedModel, findObj), 1);
-						$scope.externalEvents.onItemDeselect(findObj);
+						$scope._event('onItemDeselect')(findObj);
 						if ($scope.settings.closeOnDeselect) $scope.open = false;
 					} else if (!exists) {
 						if ($scope.settings.selectionLimit !== 0 && $scope.settings.deselectToLimit) {
 							while ($scope.selectedModel.length >= $scope.settings.selectionLimit) {
-								$scope.externalEvents.onItemDeselect($scope.selectedModel.shift());
+								$scope._event('onItemDeselect')($scope.selectedModel.shift());
 							}
 						}
 						if ($scope.settings.selectionLimit === 0 || $scope.selectedModel.length < $scope.settings.selectionLimit) {
 							$scope.selectedModel.push(finalObj);
-							$scope.externalEvents.onItemSelect(finalObj);
+							$scope._event('onItemSelect')(finalObj);
 							if ($scope.settings.closeOnSelect) $scope.open = false;
 							if ($scope.settings.selectionLimit > 0 && $scope.selectedModel.length === $scope.settings.selectionLimit) {
-								$scope.externalEvents.onMaxSelectionReached();
+								$scope._event('onMaxSelectionReached')();
 							}
 						}
 					}
 				}
 				if (fireSelectionChange) {
-					$scope.externalEvents.onSelectionChanged();
+					$scope._event('onSelectionChanged')();
 				}
 				$scope.selectedGroup = null;
 			};
@@ -370,7 +360,7 @@ directiveModule.directive('ngDropdownMultiselect', ['$filter', '$document', '$co
 				return findIndex($scope.selectedModel, getFindObj(id)) !== -1;
 			};
 
-			$scope.externalEvents.onInitDone();
+			$scope._event('onInitDone')();
 
 			$scope.keyDownLink = function(event) {
 				var sourceScope = angular.element(event.target).scope();
